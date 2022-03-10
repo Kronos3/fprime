@@ -26,7 +26,7 @@ namespace Fw {
     }
 
     const char* StringBase::operator+=(const char* src) {
-        this->appendBuff(src, strnlen(src, this->getCapacity()));
+        this->appendBuff(src, strlen(src));
         return this->toChar();
     }
 
@@ -117,7 +117,7 @@ namespace Fw {
     }
 
     NATIVE_UINT_TYPE StringBase::length(void) const {
-        return strnlen(this->toChar(),this->getCapacity());
+        return strlen(this->toChar());
     }
 
     SerializeStatus StringBase::serialize(SerializeBufferBase& buffer) const {

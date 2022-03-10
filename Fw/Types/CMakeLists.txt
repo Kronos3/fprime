@@ -22,6 +22,7 @@ set(SOURCE_FILES
 )
 set(MOD_DEPS
   Fw/Cfg
+  libc_stubs
 )
 register_fprime_module()
 ### UTs ###
