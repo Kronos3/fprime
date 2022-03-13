@@ -28,7 +28,7 @@ namespace Fw {
     }
 
     NATIVE_UINT_TYPE LogStringArg::length(void) const {
-        return (NATIVE_UINT_TYPE) strnlen(this->m_buf,sizeof(m_buf));
+        return (NATIVE_UINT_TYPE) strlen(this->m_buf);
     }
 
     const char* LogStringArg::toChar(void) const {
@@ -37,7 +37,7 @@ namespace Fw {
 
     SerializeStatus LogStringArg::serialize(SerializeBufferBase& buffer) const {
         // serialize string
-        NATIVE_UINT_TYPE strSize = FW_MIN(this->m_maxSer,static_cast<NATIVE_UINT_TYPE>(strnlen(this->m_buf,sizeof(this->m_buf))));
+        NATIVE_UINT_TYPE strSize = FW_MIN(this->m_maxSer,static_cast<NATIVE_UINT_TYPE>(strlen(this->m_buf)));
 #if FW_AMPCS_COMPATIBLE
         // serialize string in AMPC compatible way
         // AMPC requires an 8-bit argument size value before the string
