@@ -10,9 +10,6 @@
 //
 // ======================================================================
 
-#include <stdio.h>
-#include <stdlib.h>
-
 #include "Svc/FileManager/FileManager.hpp"
 #include "Fw/Types/Assert.hpp"
 #include "Fw/Types/BasicTypes.hpp"
@@ -243,8 +240,8 @@ namespace Svc {
     );
     FW_ASSERT(static_cast<NATIVE_UINT_TYPE>(bytesCopied) < sizeof(buffer));
     
-    const int status = system(buffer);
-    return status;
+//    const int status = system(buffer);
+    return 1;
   }
 
   void FileManager ::

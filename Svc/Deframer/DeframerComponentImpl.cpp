@@ -134,7 +134,7 @@ void DeframerComponentImpl ::processRing() {
             m_in_ring.rotate(1);
             // Checksum errors get logged as it is unlikely to get to a checksum check on random data
             if (status == DeframingProtocol::DEFRAMING_INVALID_CHECKSUM) {
-                Fw::Logger::logMsg("[ERROR] Deframing checksum validation failed\n");
+                Fw::Logger::logMsg("[ERROR] Deframing checksum validation failed\r\n");
             }
         }
     }
