@@ -175,7 +175,7 @@ class PortHVisitor(AbstractVisitor.AbstractVisitor):
                 "NATIVE_INT_TYPE",
                 "NATIVE_UINT_TYPE",
                 "POINTER_CAST",
-            ]:
+            ] or arg.get_modifier() == "pointer":
                 t = "sizeof(" + t + cl
             else:
                 t = t + "::SERIALIZED_SIZE"

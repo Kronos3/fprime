@@ -10,6 +10,8 @@ namespace Svc {
         RateGroupDriverComponentBase(compName),
     m_ticks(0),m_rollover(1)
     {
+        printf("ARG constructor\n");
+        fflush(stdout);
 
         // double check arguments
         FW_ASSERT(dividers);

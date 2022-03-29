@@ -3,7 +3,7 @@
 ##
 
 //Set base id section
-void set$(name)Ids(void){
+void Kernel::set$(name)Ids(void){
 #for $id_string in $component_reference_ids:
 	${id_string}
 #end for
@@ -59,7 +59,7 @@ void $(name)Register(void) {
 #end if
 
 
-void construct$(name)Architecture(void) {
+void Kernel::construct$(name)Architecture(void) {
 #if $connect_only:
    #pass
 #else:
