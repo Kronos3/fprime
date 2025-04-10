@@ -55,6 +55,8 @@ EnumType::EnumType() {
 EnumTypes::EnumTypes() {
     val1 = getRandomFormalParamEnum();
     val2 = getRandomFormalParamEnum();
+    val3 = getRandomFormalParamEnum();
+    val4 = getRandomFormalParamEnum();
 }
 
 ArrayType::ArrayType() {
@@ -64,6 +66,10 @@ ArrayType::ArrayType() {
 ArrayTypes::ArrayTypes() {
     getRandomFormalParamArray(val1);
     getRandomFormalParamArray(val2);
+    getRandomFormatStringArray(val3);
+    getRandomFormatStringArray(val4);
+    getRandomFormatStringArray(val5);
+    getRandomFormatStringArray(val6);
 }
 
 StructType::StructType() {
@@ -139,6 +145,10 @@ StringType::StringType() {
     setRandomString(val, decltype(val)::STRING_SIZE);
 }
 
+AliasStringArrayType::AliasStringArrayType() {
+    getRandomFormatStringArray(val);
+}
+
 StringTypes::StringTypes() {
     setRandomString(val1, decltype(val1)::STRING_SIZE / 2);
     setRandomString(val2, decltype(val2)::STRING_SIZE / 2);
@@ -186,13 +196,25 @@ void getRandomFormalParamArray(FormalParamArray& a) {
     }
 }
 
+void getRandomFormatStringArray(FormalAliasStringArray& a) {
+    for (U32 i = 0; i < FormalParamArray::SIZE; i++) {
+        a[i].setBuffer(new char[32], 32);
+        setRandomString(a[i], static_cast<U32>(a[i].getCapacity()));
+    }
+}
+
 FormalParamStruct getRandomFormalParamStruct() {
     FormalParamStruct s;
+
     char buf[s.gety().getCapacity()];
+    Utils::setString(buf, sizeof(buf));
+
     Fw::StringTemplate<80> str(buf);
 
     Utils::setString(buf, sizeof(buf));
-    s.set(STest::Pick::any(), str);
+    Fw::StringTemplate<80> str2(buf);
+
+    s.set(STest::Pick::any(), str, str2);
 
     return s;
 }
