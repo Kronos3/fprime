@@ -256,7 +256,7 @@ void setRandomString(Fw::StringBase& str, U32 size);
 FormalParamEnum getRandomFormalParamEnum();
 void getRandomFormalParamArray(FormalParamArray& a);
 FormalParamStruct getRandomFormalParamStruct();
-void getRandomFormatStringArray(FormalAliasStringArray& a);
+void getRandomFormalStringArray(FormalAliasStringArray& a);
 
 // ----------------------------------------------------------------------
 // Typedefs

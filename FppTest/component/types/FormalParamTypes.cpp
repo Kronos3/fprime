@@ -66,10 +66,10 @@ ArrayType::ArrayType() {
 ArrayTypes::ArrayTypes() {
     getRandomFormalParamArray(val1);
     getRandomFormalParamArray(val2);
-    getRandomFormatStringArray(val3);
-    getRandomFormatStringArray(val4);
-    getRandomFormatStringArray(val5);
-    getRandomFormatStringArray(val6);
+    getRandomFormalStringArray(val3);
+    getRandomFormalStringArray(val4);
+    getRandomFormalStringArray(val5);
+    getRandomFormalStringArray(val6);
 }
 
 StructType::StructType() {
@@ -146,7 +146,7 @@ StringType::StringType() {
 }
 
 AliasStringArrayType::AliasStringArrayType() {
-    getRandomFormatStringArray(val);
+    getRandomFormalStringArray(val);
 }
 
 StringTypes::StringTypes() {
@@ -196,9 +196,8 @@ void getRandomFormalParamArray(FormalParamArray& a) {
     }
 }
 
-void getRandomFormatStringArray(FormalAliasStringArray& a) {
+void getRandomFormalStringArray(FormalAliasStringArray& a) {
     for (U32 i = 0; i < FormalParamArray::SIZE; i++) {
-        a[i].setBuffer(new char[32], 32);
         setRandomString(a[i], static_cast<U32>(a[i].getCapacity()));
     }
 }
