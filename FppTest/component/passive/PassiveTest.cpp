@@ -36,8 +36,8 @@
 
   void PassiveTest ::
     serialGuarded_handler(
-        FwIndexType portNum, /*!< The port number*/
-        Fw::SerializeBufferBase &Buffer /*!< The serialization buffer*/
+        FwIndexType portNum, //!< The port number
+        Fw::SerializeBufferBase &Buffer //!< The serialization buffer
     )
   {
     this->serializeStatus = this->serialOut_out(portNum, Buffer);
@@ -45,8 +45,8 @@
 
   void PassiveTest ::
     serialSync_handler(
-        FwIndexType portNum, /*!< The port number*/
-        Fw::SerializeBufferBase &Buffer /*!< The serialization buffer*/
+        FwIndexType portNum, //!< The port number
+        Fw::SerializeBufferBase &Buffer //!< The serialization buffer
     )
   {
     this->serializeStatus = this->serialOut_out(portNum, Buffer);

@@ -4,7 +4,7 @@
 
 // ----------------------------------------------------------------------
 // Handler implementations for user-defined typed input ports
-// ------------
+// ----------------------------------------------------------------------
 
 Fw::String TestComponentName ::stringReturnGuarded_handler(
   FwIndexType portNum,

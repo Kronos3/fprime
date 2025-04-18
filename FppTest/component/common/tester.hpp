@@ -17,17 +17,17 @@ void from_arrayArgsOut_handler(
 //! Handler for from_arrayReturnOut
 //!
 FormalParamArray from_arrayReturnOut_handler(
-    const FwIndexType portNum, /*!< The port number*/
-    const FormalParamArray& a,     /*!< An array */
-    FormalParamArray& aRef         /*!< An array ref */
+    const FwIndexType portNum, //!< The port number
+    const FormalParamArray& a,     //!< An array
+    FormalParamArray& aRef         //!< An array ref
 ) final;
 
 //! Handler for from_enumArgsOut
 //!
 void from_enumArgsOut_handler(
-    const FwIndexType portNum, /*!< The port number*/
-    const FormalParamEnum& en, /*!< An enum */
-    FormalParamEnum& enRef, /*!< An enum ref */
+    const FwIndexType portNum, //!< The port number
+    const FormalParamEnum& en, //!< An enum
+    FormalParamEnum& enRef, //!< An enum ref
     const FormalAliasEnum& enA, //!< An enum alias
     FormalAliasEnum& enARef //!< An enum alias ref
 ) final;
@@ -35,9 +35,9 @@ void from_enumArgsOut_handler(
 //! Handler for from_enumReturnOut
 //!
 FormalParamEnum from_enumReturnOut_handler(
-    const FwIndexType portNum, /*!< The port number*/
-    const FormalParamEnum& en, /*!<An enum */
-    FormalParamEnum& enRef     /*!< An enum ref */
+    const FwIndexType portNum, //!< The port number
+    const FormalParamEnum& en, //!<An enum
+    FormalParamEnum& enRef     //!< An enum ref
 ) final;
 
 //! Handler base-class function for from_arrayStringAliasReturnOut
@@ -75,18 +75,18 @@ Fw::String from_stringReturnOut_handler(
 //! Handler for from_noArgsOut
 //!
 void from_noArgsOut_handler(
-    const FwIndexType portNum /*!< The port number*/
+    const FwIndexType portNum //!< The port number
 ) final;
 
 //! Handler for from_noArgsReturnOut
 //!
 bool from_noArgsReturnOut_handler(
-    const FwIndexType portNum /*!< The port number*/
+    const FwIndexType portNum //!< The port number
 ) final;
 
 //! Handler for from_primitiveArgsOut
 //!
-void from_primitiveArgsOut_handler(const FwIndexType portNum, /*!< The port number*/
+void from_primitiveArgsOut_handler(const FwIndexType portNum, //!< The port number
     U32 u32,
     U32& u32Ref,
     F32 f32,
@@ -97,7 +97,7 @@ void from_primitiveArgsOut_handler(const FwIndexType portNum, /*!< The port numb
 
 //! Handler for from_primitiveReturnOut
 //!
-U32 from_primitiveReturnOut_handler(const FwIndexType portNum, /*!< The port number*/
+U32 from_primitiveReturnOut_handler(const FwIndexType portNum, //!< The port number
     U32 u32,
     U32& u32Ref,
     F32 f32,
@@ -108,30 +108,30 @@ U32 from_primitiveReturnOut_handler(const FwIndexType portNum, /*!< The port num
 
 //! Handler for from_prmGetIn
 //!
-Fw::ParamValid from_prmGetIn_handler(const FwIndexType portNum, /*!< The port number*/
-    FwPrmIdType id, /*!< Parameter ID */
-    Fw::ParamBuffer& val /*!< Buffer containing serialized parameter value */
+Fw::ParamValid from_prmGetIn_handler(const FwIndexType portNum, //!< The port number
+    FwPrmIdType id, //!< Parameter ID
+    Fw::ParamBuffer& val //!< Buffer containing serialized parameter value
 ) final;
 
 //! Handler for from_prmGetIn
 //!
-void from_prmSetIn_handler(const FwIndexType portNum, /*!< The port number*/
-    FwPrmIdType id, /*!< Parameter ID */
-    Fw::ParamBuffer& val /*!< Buffer containing serialized parameter value */
+void from_prmSetIn_handler(const FwIndexType portNum, //!< The port number
+    FwPrmIdType id, //!< Parameter ID
+    Fw::ParamBuffer& val //!< Buffer containing serialized parameter value
 ) final;
 
 //! Handler for from_structArgsOut
 //!
-void from_structArgsOut_handler(const FwIndexType portNum, /*!< The port number*/
-    const FormalParamStruct& s, /*!< A struct */
-    FormalParamStruct& sRef /*!< A struct ref */
+void from_structArgsOut_handler(const FwIndexType portNum, //!< The port number
+    const FormalParamStruct& s, //!< A struct
+    FormalParamStruct& sRef //!< A struct ref
 ) final;
 
 //! Handler for from_structReturnOut
 //!
-FormalParamStruct from_structReturnOut_handler(const FwIndexType portNum, /*!< The port number*/
-    const FormalParamStruct& s, /*!< A struct */
-    FormalParamStruct& sRef /*!< A struct ref */
+FormalParamStruct from_structReturnOut_handler(const FwIndexType portNum, //!< The port number
+    const FormalParamStruct& s, //!< A struct
+    FormalParamStruct& sRef //!< A struct ref
 ) final;
 
 void from_enumArgsHookOverflowed_handler(const FwIndexType portNum,
