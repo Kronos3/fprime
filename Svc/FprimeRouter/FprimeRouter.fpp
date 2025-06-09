@@ -5,7 +5,7 @@ module Svc {
         # ----------------------------------------------------------------------
         # Router interface
         # ----------------------------------------------------------------------
-        include "../Interfaces/RouterInterface.fppi"
+        import Router
 
         @ Port for forwarding non-recognized packet types
         output port unknownDataOut: Svc.ComDataWithContext
