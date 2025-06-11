@@ -103,9 +103,6 @@ def test_ref_module_info(REF_BUILD):
         "Commands.fppi",
         "Events.fppi",
         "Telemetry.fppi",
-        "CommandInterface.fppi",
-        "ChannelInterface.fppi",
-        "EventInterface.fppi",
     ]
     actual_ac = [Path(source).name for source in ac_sources]
     assert sorted(expected_ac) == sorted(
