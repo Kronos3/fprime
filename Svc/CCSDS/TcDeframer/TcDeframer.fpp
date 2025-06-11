@@ -3,7 +3,7 @@ module CCSDS {
     @ Deframer for the TC Space Data Link Protocol (CCSDS Standard)
     passive component TcDeframer {
 
-        include "../../Interfaces/DeframerInterface.fppi"
+        import Deframer
 
         @ Deframing received an invalid SCID
         event InvalidSpacecraftId(transmitted: U16, configured: U16) \

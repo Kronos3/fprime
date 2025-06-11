@@ -3,7 +3,7 @@ module CCSDS {
     @ Deframer for the CCSDS Space Packet protocol
     passive component SpacePacketDeframer {
 
-        include "../../Interfaces/DeframerInterface.fppi"
+        import Deframer
 
         @ Port to validate a received sequence count for a given APID
         output port validateApidSeqCount: CCSDS.ApidSequenceCount
