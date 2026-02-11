@@ -5,25 +5,11 @@ module FppTest {
         @ Command dispatch port
         output port compCmdSend: [CmdDispatcherComponentCommandPorts] Fw.Cmd
 
-        @ Output Command Status Port
-        output port seqCmdStatus: [CmdDispatcherSequencePorts] Fw.CmdResponse
-
         @ Command Registration Port. max_number should match dispatch port.
         guarded input port compCmdReg: [CmdDispatcherComponentCommandPorts] Fw.CmdReg
 
         @ Input Command Status Port
         async input port compCmdStat: Fw.CmdResponse
-
-        @ Command buffer input port for sequencers or other sources of command buffers
-        async input port seqCmdBuff: [CmdDispatcherSequencePorts] Fw.Com assert
-
-        # ----------------------------------------------------------------------
-        # Port matching specifiers
-        # ----------------------------------------------------------------------
-
-        match compCmdSend with compCmdReg
-
-        match seqCmdStatus with seqCmdBuff
 
         @ Event input port
         sync input port LogRecv: Fw.Log
@@ -51,6 +37,18 @@ module FppTest {
 
         @ Ports for sending requested data product buffers to a client component
         output port productResponseOut: [DpManagerNumPorts] Fw.DpResponse
+
+        @ Ping output port
+        output port PingSend: [HealthPingPorts] Svc.Ping
+
+        @ Ping return port
+        async input port PingReturn: [HealthPingPorts] Svc.Ping
+
+        # ----------------------------------------------------------------------
+        # Port matching specifiers
+        # ----------------------------------------------------------------------
+
+        match compCmdSend with compCmdReg
 
     }
 

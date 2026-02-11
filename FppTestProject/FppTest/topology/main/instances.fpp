@@ -31,4 +31,14 @@ module FppTest {
     stack size Default.STACK_SIZE \
     priority 20
 
+  instance framework: Framework base id 0x2000 \
+    queue size Default.QUEUE_SIZE \
+    stack size Default.STACK_SIZE \
+    priority 20
+
+  instance comp: Comp base id 0x2100 \
+    queue size Default.QUEUE_SIZE \
+    stack size Default.STACK_SIZE \
+    priority 20
+
 }

@@ -29,10 +29,14 @@ void Framework ::LogRecv_handler(FwIndexType portNum,
 }
 
 Fw::ParamValid Framework ::ParamGetIn_handler(FwIndexType portNum, FwPrmIdType id, Fw::ParamBuffer& val) {
-    // TODO return
+    return {Fw::ParamValid::DEFAULT};
 }
 
 void Framework ::ParamSetIn_handler(FwIndexType portNum, FwPrmIdType id, Fw::ParamBuffer& val) {
+    // TODO
+}
+
+void Framework ::PingReturn_handler(FwIndexType portNum, U32 key) {
     // TODO
 }
 
@@ -63,14 +67,10 @@ Fw::Success Framework ::productGetIn_handler(FwIndexType portNum,
                                              FwDpIdType id,
                                              FwSizeType dataSize,
                                              Fw::Buffer& buffer) {
-    // TODO return
+    return {Fw::Success::SUCCESS};
 }
 
 void Framework ::productRequestIn_handler(FwIndexType portNum, FwDpIdType id, FwSizeType dataSize) {
-    // TODO
-}
-
-void Framework ::seqCmdBuff_handler(FwIndexType portNum, Fw::ComBuffer& data, U32 context) {
     // TODO
 }
 

@@ -6,23 +6,75 @@
 
 #include "FppTest/topology/components/Comp/Comp.hpp"
 
+namespace Fw {
+class SerialBuffer;
+}
 namespace FppTest {
 
 // ----------------------------------------------------------------------
 // Component construction and destruction
 // ----------------------------------------------------------------------
 
-Comp ::Comp(const char* const compName) : CompComponentBase(compName) {}
+Comp ::Comp(const char* const compName)
+    : CompComponentBase(compName), m_dpInProgress(false), m_opcode(0), m_cmdSeq(0) {}
 
-Comp ::~Comp() {}
+Comp ::~Comp() = default;
+
+// ----------------------------------------------------------------------
+// Handler implementations for typed input ports
+// ----------------------------------------------------------------------
+
+void Comp ::EmitEventIn_handler(FwIndexType portNum, U32 a, F32 b, const Fw::StringBase& c) {
+    log_ACTIVITY_HI_Event(a, b, c);
+}
+
+void Comp ::EmitTelemetryIn_handler(FwIndexType portNum, U32 a) {
+    tlmWrite_Telemetry(a);
+}
+
+void Comp ::PingIn_handler(FwIndexType portNum, U32 key) {
+    PingOut_out(portNum, key);
+}
+
+U32 Comp ::GetParameter_handler(FwIndexType portNum) {
+    Fw::ParamValid valid;
+    return paramGet_Param(valid);
+}
 
 // ----------------------------------------------------------------------
 // Handler implementations for commands
 // ----------------------------------------------------------------------
 
-void Comp ::Command_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, U32 a, F32 b, const Fw::CmdStringArg& c) {
-    // TODO
-    this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
+void Comp ::Start_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, U32 nRecords) {
+    if (m_dpInProgress) {
+        this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::BUSY);
+        return;
+    }
+
+    m_dpInProgress = true;
+    m_opcode = opCode;
+    m_cmdSeq = cmdSeq;
+    dpRequest_Product(FixedSizeData::SERIALIZED_SIZE * nRecords);
+}
+
+void Comp ::Data_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, U32 a, F32 b, const Fw::CmdStringArg& c) {
+    if (m_dpInProgress) {
+        const auto status = m_dpContainer.serializeRecord_FixedSizeDataRecord(FixedSizeData(a, b, c));
+        FW_ASSERT(status == Fw::SerializeStatus::FW_SERIALIZE_OK);
+        this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
+    } else {
+        this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::BUSY);
+    }
+}
+
+void Comp ::End_cmdHandler(FwOpcodeType opCode, U32 cmdSeq) {
+    if (m_dpInProgress) {
+        dpSend(m_dpContainer);
+        m_dpInProgress = false;
+        this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::OK);
+    } else {
+        this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::BUSY);
+    }
 }
 
 // ----------------------------------------------------------------------
@@ -30,7 +82,9 @@ void Comp ::Command_cmdHandler(FwOpcodeType opCode, U32 cmdSeq, U32 a, F32 b, co
 // ----------------------------------------------------------------------
 
 void Comp ::dpRecv_Product_handler(DpContainer& container, Fw::Success::T status) {
-    // TODO
+    FW_ASSERT(status == Fw::Success::SUCCESS, status);
+    container.serializeHeader();
+    this->cmdResponse_out(m_opcode, m_cmdSeq, Fw::CmdResponse::OK);
 }
 
 }  // namespace FppTest

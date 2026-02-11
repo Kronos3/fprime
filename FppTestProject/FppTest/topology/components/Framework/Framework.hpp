@@ -56,6 +56,13 @@ class Framework final : public FrameworkComponentBase {
                             Fw::ParamBuffer& val  //!< Buffer containing serialized parameter value
                             ) override;
 
+    //! Handler implementation for PingReturn
+    //!
+    //! Ping return port
+    void PingReturn_handler(FwIndexType portNum,  //!< The port number
+                            U32 key               //!< Value to return to pinger
+                            ) override;
+
     //! Handler implementation for TextLogRecv
     //!
     //! Text Event input port
@@ -107,14 +114,6 @@ class Framework final : public FrameworkComponentBase {
                                   FwDpIdType id,        //!< The container ID
                                   FwSizeType dataSize   //!< The data size of the requested buffer
                                   ) override;
-
-    //! Handler implementation for seqCmdBuff
-    //!
-    //! Command buffer input port for sequencers or other sources of command buffers
-    void seqCmdBuff_handler(FwIndexType portNum,  //!< The port number
-                            Fw::ComBuffer& data,  //!< Buffer containing packet data
-                            U32 context           //!< Call context value; meaning chosen by user
-                            ) override;
 
     //! Handler implementation for timeGetIn
     //!

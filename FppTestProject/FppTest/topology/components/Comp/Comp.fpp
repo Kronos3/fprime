@@ -2,26 +2,48 @@ module FppTest {
 
   @ A struct with a fixed-size member array
   struct FixedSizeData {
-    data: [1024] F32
+    a: U32
+    b: [3] F32
+    c: string size 10
   }
+
+  port EmitEvent(
+    a: U32,
+    b: F32,
+    c: string size 10
+  )
+
+  port EmitTelemetry(a: U32)
+  port GetParameter() -> U32
 
   active component Comp {
 
     import SpecialPorts
 
-    async command Command(
+    sync input port EmitEventIn: EmitEvent
+    sync input port EmitTelemetryIn: EmitTelemetry
+    sync input port GetParameter: GetParameter
+
+    async input port PingIn: Svc.Ping
+    output port PingOut: Svc.Ping
+
+    async command Start(nRecords: U32)
+    async command Data(
         a: U32,
         b: F32,
         c: string size 10
     )
+    async command End()
 
     event Event(
         a: U32,
-        b: U32,
-        c: U32
+        b: F32,
+        c: string size 10
     ) severity activity high format "a: {}, b: {}, c: {}"
 
     telemetry Telemetry: U32
+
+    param Param: U32 default 0
 
     @ A record containing fixed-size data
     product record FixedSizeDataRecord: FixedSizeData id 0x00
