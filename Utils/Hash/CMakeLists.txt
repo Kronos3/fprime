@@ -5,13 +5,33 @@
 # MOD_DEPS: (optional) module dependencies
 #
 ####
-set(SOURCE_FILES
-  "${CMAKE_CURRENT_LIST_DIR}/libcrc/CRC32.cpp"
-  "${CMAKE_CURRENT_LIST_DIR}/libcrc/lib_crc.c"
-  "${CMAKE_CURRENT_LIST_DIR}/HashBufferCommon.cpp"
-  "${CMAKE_CURRENT_LIST_DIR}/HashCommon.cpp"
+
+register_fprime_library(
+    SOURCES
+        HashBufferCommon.cpp
+        HashCommon.cpp
+
+        Crc32/Crc32.cpp
+        Crc32/HashImpl.cpp
+
+        # Only provided to satisfy CCSDS
+        libcrc/lib_crc.c
+    HEADERS
+        Hash.hpp
+        HashBuffer.hpp
+        HashConfig.hpp
+
+        Crc32/Crc32.hpp
+
+        # Only provided to satisfy CCSDS
+        libcrc/lib_crc.h
+    DEPENDS
+        Fw_Types
 )
-set(MOD_DEPS
-  "Fw/Types"
+
+register_fprime_ut(
+    SOURCES
+        Crc32/test/ut/Crc32Test.cpp
+    DEPENDS
+        Utils_Hash
 )
-register_fprime_module()

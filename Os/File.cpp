@@ -5,12 +5,10 @@
 #include <Fw/Types/Assert.hpp>
 #include <Fw/Types/StringUtils.hpp>
 #include <Os/File.hpp>
+#include <Utils/Hash/Hash.hpp>
 #include <algorithm>
 #include <config/FppConstantsAc.hpp>
 
-extern "C" {
-#include <Utils/Hash/libcrc/lib_crc.h>  // borrow CRC
-}
 namespace Os {
 
 File::File() : m_crc_buffer(), m_handle_storage(), m_delegate(*FileInterface::getDelegate(m_handle_storage)) {
@@ -254,7 +252,7 @@ File::Status File::calculateCrc(U32& crc) {
 
 File::Status File::incrementalCrc(FwSizeType& size) {
     File::Status status = File::Status::OP_OK;
-    FW_ASSERT(size <= FW_FILE_CHUNK_SIZE);
+    FW_ASSERT(size <= FW_FILE_CHUNK_SIZE, FwAssertArgType(size));
     if (OPEN_NO_MODE == this->m_mode) {
         status = File::Status::NOT_OPENED;
     } else if (OPEN_READ != this->m_mode) {
@@ -263,9 +261,14 @@ File::Status File::incrementalCrc(FwSizeType& size) {
         // Read data without waiting for additional data to be available
         status = this->read(this->m_crc_buffer, size, File::WaitType::NO_WAIT);
         if (OP_OK == status) {
-            for (FwSizeType i = 0; i < size && i < FW_FILE_CHUNK_SIZE; i++) {
-                this->m_crc = static_cast<U32>(update_crc_32(this->m_crc, static_cast<CHAR>(this->m_crc_buffer[i])));
-            }
+            FW_ASSERT(size <= FW_FILE_CHUNK_SIZE, FwAssertArgType(size));
+            // FIXME: Utils::Hash should be integrated more carefully into File
+            Utils::Hash hash;
+            hash.setHashValue(U32(~this->m_crc));
+            hash.update(this->m_crc_buffer, size);
+            U32 crc;
+            hash.finalize(crc);
+            this->m_crc = ~crc;
         }
     }
     return status;
