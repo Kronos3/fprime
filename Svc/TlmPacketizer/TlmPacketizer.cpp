@@ -138,6 +138,9 @@ void TlmPacketizer::setPacketList(const TlmPacketizerPacketList& packetList,
             }
             const Fw::Success insertStatus = this->m_channelIndices.insert(id, entryIndex);
             FW_ASSERT(insertStatus == Fw::Success::SUCCESS, static_cast<FwAssertArgType>(insertStatus));
+        } else {
+            // Ensure it is a duplicate in the ignore list, not a duplicate of a valid channel
+            FW_ASSERT(this->m_channels[entryIndex].ignored, static_cast<FwAssertArgType>(id));
         }
         // is ignored channel - update entry in place via reference
         TlmEntry& entry = this->m_channels[entryIndex];
@@ -187,6 +190,10 @@ void TlmPacketizer ::TlmRecv_handler(const FwIndexType portNum,
             this->m_fillBuffers[pkt].updated = true;
             this->m_fillBuffers[pkt].latestTime = timeTag;
             U8* ptr = &this->m_fillBuffers[pkt].buffer.getBuffAddr()[entry.packetOffset[pkt]];
+            // validate before memcpy
+            FW_ASSERT(val.getSize() <= entry.channelSize, static_cast<FwAssertArgType>(val.getSize()),
+                      static_cast<FwAssertArgType>(entry.channelSize));
+
             (void)memcpy(ptr, val.getBuffAddr(), static_cast<size_t>(val.getSize()));
             this->m_lock.unLock();
         }
@@ -379,9 +386,9 @@ void TlmPacketizer ::Run_handler(const FwIndexType portNum, U32 context) {
 void TlmPacketizer ::controlIn_handler(FwIndexType portNum,
                                        const Svc::TelemetrySection& section,
                                        const Fw::Enabled& enabled) {
-    FW_ASSERT(section.isValid());
-    FW_ASSERT(enabled.isValid());
-    if (0 <= section && section < TelemetrySection::NUM_SECTIONS) {
+    // NUM_SECTIONS is an enum constant (not a standalone constant), so isValid() accepts it.
+    // The explicit bounds check prevents an out-of-bounds write to m_sectionEnabled.
+    if (section.isValid() && section < TelemetrySection::NUM_SECTIONS && enabled.isValid()) {
         (void)(this->m_sectionEnabled[static_cast<FwSizeType>(section)] = enabled);
     } else {
         this->log_WARNING_LO_SectionUnconfigurable(section, enabled);
@@ -400,6 +407,8 @@ void TlmPacketizer ::pingIn_handler(const FwIndexType portNum, U32 key) {
 void TlmPacketizer ::SET_LEVEL_cmdHandler(const FwOpcodeType opCode, const U32 cmdSeq, FwChanIdType level) {
     if (level > MAX_CONFIGURABLE_TLMPACKETIZER_GROUP) {
         this->log_WARNING_LO_MaxLevelExceed(level, MAX_CONFIGURABLE_TLMPACKETIZER_GROUP);
+        this->cmdResponse_out(opCode, cmdSeq, Fw::CmdResponse::VALIDATION_ERROR);
+        return;
     }
     for (FwIndexType section = 0; section < TelemetrySection::NUM_SECTIONS; section++) {
         for (FwChanIdType group = 0; group < NUM_CONFIGURABLE_TLMPACKETIZER_GROUPS; group++) {
@@ -561,15 +570,15 @@ Fw::SerializeStatus TlmPacketizer::deserializeParam(const FwPrmIdType base_id,
                                                     const FwPrmIdType local_id,
                                                     const Fw::ParamValid prmStat,
                                                     Fw::SerialBufferBase& buff) {
-    // Autocoder always calls deserializeParam with VALID
-    FW_ASSERT(prmStat == Fw::ParamValid::VALID);
-    switch (local_id) {
-        case PARAMID_SECTION_ENABLED:
-            return buff.deserializeTo(this->m_sectionEnabled);
-        case PARAMID_SECTION_CONFIGS:
-            return buff.deserializeTo(this->m_groupConfigs);
-        default:
-            FW_ASSERT(0, static_cast<FwAssertArgType>(local_id));
+    if ((prmStat == Fw::ParamValid::VALID) || (prmStat == Fw::ParamValid::DEFAULT)) {
+        switch (local_id) {
+            case PARAMID_SECTION_ENABLED:
+                return buff.deserializeTo(this->m_sectionEnabled);
+            case PARAMID_SECTION_CONFIGS:
+                return buff.deserializeTo(this->m_groupConfigs);
+            default:
+                FW_ASSERT(0, static_cast<FwAssertArgType>(local_id));
+        }
     }
     return Fw::SerializeStatus::FW_DESERIALIZE_TYPE_MISMATCH;
 }

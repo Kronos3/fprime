@@ -93,7 +93,7 @@ module Svc {
                           ) \
       opcode 1
 
-    @ Enable / disable telemetry of a group on a section
+    @ Enable / disable a telemetry section
     async command ENABLE_SECTION(
                                 section: TelemetrySection   @< Section grouping to configure
                                 enable: Fw.Enabled          @< Section enabled or disabled
@@ -144,7 +144,7 @@ module Svc {
 
     @ Telemetry send level set
     event LevelSet(
-                    $id: FwChanIdType @< The level
+                    level: FwChanIdType @< The level
                   ) \
       severity activity high \
       id 1 \
@@ -161,7 +161,7 @@ module Svc {
 
     @ Packet manually sent
     event PacketSent(
-                      $id: U32 @< The packet ID
+                      packetId: U32 @< The packet ID
                     ) \
       severity activity low \
       id 3 \
@@ -169,7 +169,7 @@ module Svc {
 
     @ Couldn't find the packet to send
     event PacketNotFound(
-                          $id: U32 @< The packet ID
+                          packetId: U32 @< The packet ID
                         ) \
       severity warning low \
       id 4 \

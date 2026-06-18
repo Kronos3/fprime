@@ -7,6 +7,8 @@
 #ifndef FpySequencer_HPP
 #define FpySequencer_HPP
 
+#include <random>
+#include "Fw/Types/FileNameString.hpp"
 #include "Fw/Types/MemAllocator.hpp"
 #include "Fw/Types/StringBase.hpp"
 #include "Fw/Types/SuccessEnumAc.hpp"
@@ -65,6 +67,8 @@ class FpySequencer : public FpySequencerComponentBase {
         FpySequencer_MemCmpDirective memCmp;
         FpySequencer_StackCmdDirective stackCmd;
         FpySequencer_PushTimeDirective pushTime;
+        FpySequencer_SetSeedDirective setSeed;
+        FpySequencer_PushRandDirective pushRand;
         FpySequencer_GetFieldDirective getField;
         FpySequencer_PeekDirective peek;
         FpySequencer_StoreRelDirective storeRel;
@@ -145,14 +149,14 @@ class FpySequencer : public FpySequencerComponentBase {
     void RUN_cmdHandler(FwOpcodeType opCode,               //!< The opcode
                         U32 cmdSeq,                        //!< The command sequence number
                         const Fw::CmdStringArg& fileName,  //!< The name of the sequence file
-                        BlockState block                   //!< Return command status when complete or not
+                        Svc::BlockState block              //!< Return command status when complete or not
                         ) override;
 
     //! Handler implementation for command RUN_ARGS
     void RUN_ARGS_cmdHandler(FwOpcodeType opCode,               //!< The opcode
                              U32 cmdSeq,                        //!< The command sequence number
                              const Fw::CmdStringArg& fileName,  //!< The name of the sequence file
-                             BlockState block,                  //!< Return command status when complete or not
+                             Svc::BlockState block,             //!< Return command status when complete or not
                              Svc::SeqArgs args                  //!< Arguments to pass to the sequencer
                              ) override;
 
@@ -591,6 +595,12 @@ class FpySequencer : public FpySequencerComponentBase {
     //! Internal interface handler for directive_pushTime
     void directive_pushTime_internalInterfaceHandler(const Svc::FpySequencer_PushTimeDirective& directive) override;
 
+    //! Internal interface handler for directive_setSeed
+    void directive_setSeed_internalInterfaceHandler(const Svc::FpySequencer_SetSeedDirective& directive) override;
+
+    //! Internal interface handler for directive_pushRand
+    void directive_pushRand_internalInterfaceHandler(const Svc::FpySequencer_PushRandDirective& directive) override;
+
     //! Internal interface handler for directive_getField
     void directive_getField_internalInterfaceHandler(const Svc::FpySequencer_GetFieldDirective& directive) override;
 
@@ -636,15 +646,20 @@ class FpySequencer : public FpySequencerComponentBase {
     FwEnumStoreType m_allocatorId;
 
     // assigned by the user via cmd
-    Fw::String m_sequenceFilePath;
+    // length is FileNameStringSize
+    Fw::FileNameString m_sequenceFilePath;
     // the sequence, loaded in memory
     Fpy::Sequence m_sequenceObj;
     // live running computation of CRC (updated as we read)
     Utils::Hash m_computedCRC;
 
+    // Size of arguments read in current sequence. Used for validation between
+    // User provided arguments and what is requested of the sequence.
+    Fpy::StackSizeType m_totalExpectedArgSize;
+
     // whether or not the sequence we're about to run should return immediately or
     // block on completion
-    BlockState m_sequenceBlockState;
+    Svc::BlockState m_sequenceBlockState;
     // if we are to block on completion, save the opCode and cmdSeq we should
     // return
     FwOpcodeType m_savedOpCode;
@@ -683,6 +698,10 @@ class FpySequencer : public FpySequencerComponentBase {
         // the absolute time we should wait for until returning
         // a statement response
         Fw::Time wakeupTime = Fw::Time();
+
+        // RNG state used by PUSH_RAND and SET_SEED directives during this run
+        std::mt19937 rng;
+        bool rngSeeded = false;
 
         Stack stack = Stack();
     } m_runtime;
@@ -886,6 +905,8 @@ class FpySequencer : public FpySequencerComponentBase {
     Signal memCmp_directiveHandler(const FpySequencer_MemCmpDirective& directive, DirectiveError& error);
     Signal stackCmd_directiveHandler(const FpySequencer_StackCmdDirective& directive, DirectiveError& error);
     Signal pushTime_directiveHandler(const FpySequencer_PushTimeDirective& directive, DirectiveError& error);
+    Signal setSeed_directiveHandler(const FpySequencer_SetSeedDirective& directive, DirectiveError& error);
+    Signal pushRand_directiveHandler(const FpySequencer_PushRandDirective& directive, DirectiveError& error);
     Signal getField_directiveHandler(const FpySequencer_GetFieldDirective& directive, DirectiveError& error);
     Signal peek_directiveHandler(const FpySequencer_PeekDirective& directive, DirectiveError& error);
     Signal storeRel_directiveHandler(const FpySequencer_StoreRelDirective& directive, DirectiveError& error);

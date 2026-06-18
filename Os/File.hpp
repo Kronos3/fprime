@@ -8,6 +8,7 @@
 #include <Fw/FPrimeBasicTypes.hpp>
 #include <Fw/Types/ConstStringBase.hpp>
 #include <Os/Os.hpp>
+#include <Utils/Hash/Hash.hpp>
 
 // Forward declaration for UTs
 namespace Os {
@@ -585,9 +586,8 @@ class File final : public FileInterface {
     static const U32 INITIAL_CRC = 0xFFFFFFFF;  //!< Initial value for CRC calculation
 
     Mode m_mode = Mode::OPEN_NO_MODE;  //!< Stores mode for error checking
-    const CHAR* m_path = nullptr;      //!< Path last opened
 
-    U32 m_crc = File::INITIAL_CRC;  //!< Current CRC calculation
+    Utils::Hash m_hash;  //!< Hash object for incremental CRC calculation
     U8 m_crc_buffer[FW_FILE_CHUNK_SIZE];
 
     // This section is used to store the implementation-defined file handle. To Os::File and fprime, this type is
