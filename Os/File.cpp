@@ -34,9 +34,16 @@ File::File(const File& other)
 
 File& File::operator=(const File& other) {
     if (this != &other) {
+        // The delegate below is constructed over the storage of the existing one. Any file this
+        // object currently holds must be closed first or its handle is orphaned permanently.
+        if (this->m_mode != OPEN_NO_MODE) {
+            this->close();
+        }
+        this->m_delegate.~FileInterface();
         this->m_mode = other.m_mode;
         this->m_hash = other.m_hash;
-        this->m_delegate = *FileInterface::getDelegate(m_handle_storage, &other.m_delegate);
+        (void)FileInterface::getDelegate(m_handle_storage, &other.m_delegate);
+        FW_ASSERT(&this->m_delegate == reinterpret_cast<FileInterface*>(&this->m_handle_storage[0]));
     }
     return *this;
 }
@@ -302,6 +309,9 @@ File::Status File::readline(U8* buffer, FwSizeType& size, File::WaitType wait) {
         read = current_chunk_size;
         status = this->read(buffer + i, read, wait);
         if (status != File::Status::OP_OK) {
+            // Contract: on error, seek back to the original location
+            size = 0;
+            (void)this->seek_absolute(original_location);
             return status;
         }
         // EOF break out now
@@ -310,7 +320,8 @@ File::Status File::readline(U8* buffer, FwSizeType& size, File::WaitType wait) {
             return Os::File::Status::OP_OK;
         }
         // Loop from i to i + current_chunk_size looking for `\n`
-        for (FwSizeType j = i; j < (i + read); j++) {
+        const FwSizeType chunk_end = i + read;
+        for (FwSizeType j = i; j < chunk_end; j++) {
             // Newline seek back to after it, return the size read
             if (buffer[j] == '\n') {
                 size = j + 1;
@@ -323,6 +334,9 @@ File::Status File::readline(U8* buffer, FwSizeType& size, File::WaitType wait) {
         }
     }
     // Failed to find newline within data available
+    // Contract: on error, seek back to the original location
+    size = 0;
+    (void)this->seek_absolute(original_location);
     return Os::File::Status::OTHER_ERROR;
 }
 }  // namespace Os

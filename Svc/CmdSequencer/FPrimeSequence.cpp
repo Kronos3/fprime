@@ -20,7 +20,7 @@ void CmdSequencerComponentImpl::FPrimeSequence::CRC ::init() {
 }
 
 void CmdSequencerComponentImpl::FPrimeSequence::CRC ::update(const BYTE* buffer, FwSizeType bufferSize) {
-    FW_ASSERT(buffer);
+    FW_ASSERT(buffer != nullptr);
     this->m_computed.update(buffer, bufferSize);
 }
 
@@ -45,7 +45,7 @@ bool CmdSequencerComponentImpl::FPrimeSequence ::validateCRC() {
 
 bool CmdSequencerComponentImpl::FPrimeSequence ::loadFile(const Fw::ConstStringBase& fileName) {
     // make sure there is a buffer allocated
-    FW_ASSERT(this->m_buffer.getBuffAddr());
+    FW_ASSERT(this->m_buffer.getBuffAddr() != nullptr);
 
     this->setFileName(fileName);
 
@@ -263,7 +263,8 @@ Fw::SerializeStatus CmdSequencerComponentImpl::FPrimeSequence ::deserializeDescr
 
 Fw::SerializeStatus CmdSequencerComponentImpl::FPrimeSequence ::deserializeTimeTag(Fw::Time& timeTag) {
     Fw::LinearBufferBase& buffer = this->m_buffer;
-    U32 seconds, useconds;
+    U32 seconds;
+    U32 useconds;
     Fw::SerializeStatus status = buffer.deserializeTo(seconds);
     if (status == Fw::FW_SERIALIZE_OK) {
         status = buffer.deserializeTo(useconds);
@@ -281,8 +282,7 @@ Fw::SerializeStatus CmdSequencerComponentImpl::FPrimeSequence ::deserializeRecor
         // Not enough data left
         status = Fw::FW_DESERIALIZE_SIZE_MISMATCH;
     }
-    if (status == Fw::FW_SERIALIZE_OK and
-        recordSize + sizeof(FwPacketDescriptorType) > Fw::ComBuffer::SERIALIZED_SIZE) {
+    if (status == Fw::FW_SERIALIZE_OK and recordSize + sizeof(FwPacketDescriptorType) > FW_COM_BUFFER_MAX_SIZE) {
         // Record size is too big for com buffer
         status = Fw::FW_DESERIALIZE_SIZE_MISMATCH;
     }

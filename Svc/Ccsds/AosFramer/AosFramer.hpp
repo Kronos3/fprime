@@ -49,7 +49,7 @@ class AosFramer final : public AosFramerComponentBase {
         // Because the AOS protocol use fixed width frames, and only one frame is in transit between ComQueue and
         // ComInterface at a time, we can use a member fixed-size buffer to hold the frame data
         struct FrameBuffer {
-            U8 backer[ComCfg::AosMaxFrameFixedSize];                   //!< Buffer to hold the frame data
+            U8 backer[ComCfg::AosMaxFrameFixedSize] = {};              //!< Buffer to hold the frame data
             Fw::Buffer buffer;                                         //!< Buffer object pointing at frameBufferBacker
             BufferOwnershipState state = BufferOwnershipState::OWNED;  //!< whether m_frameBuffer is owned by AosFramer
         } frame;
@@ -65,7 +65,7 @@ class AosFramer final : public AosFramerComponentBase {
         // Technically we'd only use 6 of the 7 bytes at worst
         // cuz the first one had to go into the prev frame
         struct SppIdle {
-            U8 backer[MIN_SPP_LENGTH];
+            U8 backer[MIN_SPP_LENGTH] = {};
             U8 offset = 0;
         } spp_idle;
 
@@ -160,7 +160,7 @@ class AosFramer final : public AosFramerComponentBase {
     void compute_and_inject_fecf(AosVc& currentVc);
 
     //! Determine if the Fw::Buffer is within the backing character buffer
-    static bool buffer_belongs(Fw::Buffer& buffer, U8 const* start, FwSizeType size);
+    static bool buffer_belongs(const Fw::Buffer& buffer, U8 const* start, FwSizeType size);
 
     //! TODO: Implement multiple VCs
     //! Map frame context onto index into array of Virtual Channel structs

@@ -85,8 +85,12 @@ void DpWriter::bufferSendIn_handler(const FwIndexType portNum, Fw::Buffer& buffe
     if (status == Fw::Success::SUCCESS) {
         const FwDpIdType containerId = container.getId();
         const Fw::Time timeTag = container.getTimeTag();
-        fileName.format(DP_FILENAME_FORMAT, this->m_dpFileNamePrefix.toChar(), containerId, timeTag.getSeconds(),
-                        timeTag.getUSeconds());
+        const Fw::FormatStatus formatStatus = fileName.format(DP_FILENAME_FORMAT, this->m_dpFileNamePrefix.toChar(),
+                                                              containerId, timeTag.getSeconds(), timeTag.getUSeconds());
+        if (formatStatus != Fw::FormatStatus::SUCCESS) {
+            this->log_WARNING_HI_FileNameFormatError(static_cast<Fw::StringFormatStatus::T>(formatStatus));
+            status = Fw::Success::FAILURE;
+        }
     }
     // Calculate and populate the file data checksum
     if (status == Fw::Success::SUCCESS) {
@@ -178,9 +182,10 @@ void DpWriter::performProcessing(Fw::DpContainer& container) {
         Fw::SerializeStatus stat = container.deserializeHeader();
         FW_ASSERT(stat == Fw::FW_SERIALIZE_OK, stat);
 
-        // Check that the buffer size is compatible with the data size in
+        // Check that the buffer size is compatible with the packet size in
         // the container header
-        FW_ASSERT(container.getDataSize() <= buffer.getSize(), static_cast<FwAssertArgType>(container.getDataSize()),
+        FW_ASSERT(container.getPacketSize() <= buffer.getSize(),
+                  static_cast<FwAssertArgType>(container.getPacketSize()),
                   static_cast<FwAssertArgType>(buffer.getSize()));
 
         // Re-compute and serialize the container header into the buffer

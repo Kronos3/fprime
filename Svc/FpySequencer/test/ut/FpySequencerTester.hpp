@@ -132,6 +132,8 @@ class FpySequencerTester : public FpySequencerGTestBase, public ::testing::Test 
     void add_STORE_ABS_CONST_OFFSET(Fpy::StackSizeType globalOffset, Fpy::StackSizeType size);
     void add_STORE_ABS_CONST_OFFSET(FpySequencer_StoreAbsConstOffsetDirective dir);
     void add_POP_EVENT();
+    void add_POP_SERIALIZABLE(FwIndexType portIndex, Fpy::StackSizeType size);
+    void add_POP_SERIALIZABLE(FpySequencer_PopSerializableDirective dir);
     template <typename T>
     void add_PUSH_VAL(T val);
     //! Handle a text event
@@ -253,6 +255,9 @@ class FpySequencerTester : public FpySequencerGTestBase, public ::testing::Test 
     DirectiveError tester_op_itrunc_64_8();
     DirectiveError tester_op_itrunc_64_16();
     DirectiveError tester_op_itrunc_64_32();
+    DirectiveError tester_op_ffloor();
+    DirectiveError tester_op_iabs();
+    DirectiveError tester_op_fabs();
     FpySequencer::Runtime* tester_get_m_runtime_ptr();
     Fw::ExternalSerializeBuffer* tester_get_m_sequenceBuffer_ptr();
     void tester_set_m_sequencesStarted(U64 val);
@@ -264,6 +269,7 @@ class FpySequencerTester : public FpySequencerGTestBase, public ::testing::Test 
     Fpy::Sequence* tester_get_m_sequenceObj_ptr();
     Svc::Signal tester_dispatchStatement();
     Fw::Success tester_validate();
+    bool tester_isRunningState(Svc::FpySequencer_SequencerStateMachineStateMachineBase::State state);
     Fw::String tester_get_m_sequenceFilePath();
     void tester_set_m_sequenceFilePath(Fw::String str);
     // directly invokes the setSequenceFilePath state machine action, bypassing the

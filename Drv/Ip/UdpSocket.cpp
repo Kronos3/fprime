@@ -54,7 +54,7 @@ SocketIpStatus UdpSocket::configure(const char* const ipv4_address,
     (void)port;
     (void)timeout_seconds;
     (void)timeout_microseconds;
-    FW_ASSERT(0);  // Must use configureSend and/or configureRecv
+    FW_ASSERT(false);  // Must use configureSend and/or configureRecv
     return SocketIpStatus::SOCK_INVALID_CALL;
 }
 
@@ -107,7 +107,8 @@ SocketIpStatus UdpSocket::bind(const int fd) {
     }
 
     socklen_t size = sizeof(address);
-    if (::getsockname(fd, reinterpret_cast<struct sockaddr*>(&address), &size) == -1) {
+    const int socknameStatus = ::getsockname(fd, reinterpret_cast<struct sockaddr*>(&address), &size);
+    if (socknameStatus == -1) {
         return SOCK_FAILED_TO_READ_BACK_PORT;
     }
 
@@ -123,7 +124,6 @@ SocketIpStatus UdpSocket::openProtocol(SocketDescriptor& socketDescriptor) {
     }
 
     SocketIpStatus status = SOCK_SUCCESS;
-    int socketFd = -1;
 
     // Initialize address structure to zero before use
     struct sockaddr_in address;
@@ -133,8 +133,18 @@ SocketIpStatus UdpSocket::openProtocol(SocketDescriptor& socketDescriptor) {
     U16 recv_port = ntohs(this->m_addr_recv.sin_port);
 
     // Acquire a socket, or return error
-    if ((socketFd = ::socket(AF_INET, SOCK_DGRAM, 0)) == -1) {
+    int socketFd = ::socket(AF_INET, SOCK_DGRAM, 0);
+    if (socketFd == -1) {
         return SOCK_FAILED_TO_GET_SOCKET;
+    }
+
+    // Apply the configured timeouts. This socket may send even when no send port was
+    // configured, because a send port of 0 means "reply to the source of the last
+    // datagram received", so the timeout must not be tied to `port != 0` below.
+    status = this->setupTimeouts(socketFd);
+    if (status != SOCK_SUCCESS) {
+        (void)::close(socketFd);
+        return status;
     }
 
     // May not be sending in all cases
@@ -152,23 +162,16 @@ SocketIpStatus UdpSocket::openProtocol(SocketDescriptor& socketDescriptor) {
         status = IpSocket::addressToIp4(this->m_ipv4_address, &(address.sin_addr));
         if (status != SOCK_SUCCESS) {
             Fw::Logger::log("Failed to parse IPv4 address %s: %d\n", this->m_ipv4_address, static_cast<I32>(status));
-            ::close(socketFd);
+            (void)::close(socketFd);
             return status;
         };
 
         if (IpSocket::setupSocketOptions(socketFd) != SOCK_SUCCESS) {
-            ::close(socketFd);
+            (void)::close(socketFd);
             return SOCK_FAILED_TO_SET_SOCKET_OPTIONS;
         }
 
-        // Now apply timeouts
-        status = this->setupTimeouts(socketFd);
-        if (status != SOCK_SUCCESS) {
-            ::close(socketFd);
-            return status;
-        }
-        FW_ASSERT(sizeof(this->m_addr_send) == sizeof(address), static_cast<FwAssertArgType>(sizeof(this->m_addr_send)),
-                  static_cast<FwAssertArgType>(sizeof(address)));
+        static_assert(sizeof(m_addr_send) == sizeof(address), "Send address must match the local address structure");
         (void)memcpy(&this->m_addr_send, &address, sizeof(this->m_addr_send));
     }
 
@@ -206,9 +209,15 @@ SocketIpStatus UdpSocket::openProtocol(SocketDescriptor& socketDescriptor) {
 FwSignedSizeType UdpSocket::sendProtocol(const SocketDescriptor& socketDescriptor,
                                          const U8* const data,
                                          const FwSizeType size) {
-    FW_ASSERT(this->m_addr_send.sin_family != 0);  // Make sure the address was previously setup
-    FW_ASSERT(socketDescriptor.fd >= 0);           // File descriptor should be valid
-    FW_ASSERT(data != nullptr);                    // Data pointer should not be null
+    FW_ASSERT(socketDescriptor.fd >= 0);          // File descriptor should be valid
+    FW_ASSERT((size == 0) || (data != nullptr));  // Data pointer should not be null for nonzero sizes
+
+    // In respond-to-sender mode the destination is learned from the first received
+    // packet; a send before then has nowhere to go and is a send error, not a bug
+    if (this->m_addr_send.sin_family == 0) {
+        errno = ENOTCONN;
+        return -1;
+    }
 
     return static_cast<FwSignedSizeType>(
         ::sendto(socketDescriptor.fd, data, static_cast<size_t>(size), SOCKET_IP_SEND_FLAGS,

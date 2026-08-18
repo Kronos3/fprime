@@ -136,14 +136,31 @@ register_fprime_module(
 )
 
 add_named_os_module(Console Fw_Logger)
-add_named_os_module("File;FileSystem;Directory" Utils_Hash)
+add_named_os_module("File;FileSystem;Directory" Utils_Hash Fw_DataStructures)
 add_named_os_module(Task ${CMAKE_THREAD_LIBS_INIT})
 add_named_os_module("Mutex;Condition")
 add_named_os_module(CountingSemaphore)
 add_named_os_module(Queue)
 add_named_os_module(Cpu)
 add_named_os_module(Memory)
-add_named_os_module(RawTime Fw_Buffer)
+# RawTime: RawTime.hpp is a thin public alias header (no .cpp); the interface and
+# link-time delegate live in DelegateRawTime.{hpp,cpp}. Registered explicitly
+# because add_named_os_module assumes a matching <name>.cpp per header.
+register_fprime_module(
+      "Os_RawTime"
+    REQUIRES_IMPLEMENTATIONS
+      "Os_RawTime"
+    SOURCES
+      "${CMAKE_CURRENT_LIST_DIR}/DelegateRawTime.cpp"
+    HEADERS
+      "${CMAKE_CURRENT_LIST_DIR}/RawTime.hpp"
+      "${CMAKE_CURRENT_LIST_DIR}/DelegateRawTime.hpp"
+    DEPENDS
+      Fw_Time
+      Fw_Types
+      Fw_Buffer
+)
+fprime_target_dependencies(Os PUBLIC "Os_RawTime")
 
 ### UTS ### Note: 3 separate UTs registered here.
 register_fprime_ut(

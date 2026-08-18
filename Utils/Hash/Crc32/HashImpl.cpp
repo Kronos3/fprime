@@ -33,7 +33,7 @@ void Hash ::init() {
 
 void Hash ::update(const void* const data, FwSizeType len) {
     static_assert(sizeof(Utils::Hash::hash_handle) == sizeof(U32), "hash handle size must match CRC32 size");
-    FW_ASSERT(data);
+    FW_ASSERT(data != nullptr);
     this->hash_handle = crc32_ieee802_3_update(static_cast<const U8*>(data), len, this->hash_handle);
 }
 
@@ -41,7 +41,7 @@ void Hash ::finalize(HashBuffer& buffer) const {
     HashBuffer bufferOut;
     // For CRC32 we need to return the one's complement of the result:
     Fw::SerializeStatus status = bufferOut.serializeFrom(~(this->hash_handle));
-    FW_ASSERT(Fw::FW_SERIALIZE_OK == status);
+    FW_ASSERT(Fw::FW_SERIALIZE_OK == status, status, static_cast<FwAssertArgType>(bufferOut.getCapacity()));
     buffer = bufferOut;
 }
 

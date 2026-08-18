@@ -68,6 +68,24 @@ TEST(TestOffNominal, SetLevelInvalidTest) {
     tester.setLevelInvalidTest();
 }
 
+TEST(TestNominal, DuplicateChannelIdMatchingSizeTest) {
+    TEST_CASE(100.1.13, "Duplicate channel ID across packets with identical size");
+    Svc::TlmPacketizerTester tester;
+    tester.duplicateChannelIdMatchingSizeTest();
+}
+
+TEST(TestOffNominal, DuplicateChannelIdConflictingSizeTest) {
+    TEST_CASE(100.2.3, "Duplicate channel ID across packets with conflicting size");
+    Svc::TlmPacketizerTester tester;
+    tester.duplicateChannelIdConflictingSizeTest();
+}
+
+TEST(TestOffNominal, OversizedChannelTest) {
+    TEST_CASE(100.2.4, "Oversized channel value is rejected with a warning event");
+    Svc::TlmPacketizerTester tester;
+    tester.oversizedChannelTest();
+}
+
 TEST(TestNominal, TlmGetTest) {
     TEST_CASE(100.1.8, "Get telemetry channel");
     Svc::TlmPacketizerTester tester;

@@ -46,7 +46,7 @@ Os::Generic::PriorityMemQueue::QueueConfig queueConfig = {
 
 Os::Generic::PriorityMemQueue::QueueConfig configs[] = {queueConfig};
 
-// Test helper to access private members of PriorityMemQueue
+// Test helper wrapping the public PriorityMemQueue::resetConfig() API
 class PriorityMemQueueTestHelper {
   public:
     // Reset the configuration state for testing
@@ -940,13 +940,13 @@ TEST_F(PriorityMemQueueTestFixture, DuplicateQueueIdAssertion) {
 // validate the blocking behavior with a single receiver thread.
 struct BlockingReceiveContext {
     Os::Generic::PriorityMemQueue* queue;
-    bool messageReceived;
+    std::atomic<bool> messageReceived;
     U8 receivedData[64];
     FwSizeType receivedSize;
     FwQueuePriorityType receivedPriority;
     Os::QueueInterface::Status status;
     Os::Mutex mutex;
-    bool started;
+    std::atomic<bool> started;
 
     BlockingReceiveContext()
         : queue(nullptr),
@@ -1047,10 +1047,10 @@ TEST_F(PriorityMemQueueTestFixture, BlockingReceive) {
 // Context for blocking send test
 struct BlockingSendContext {
     Os::Generic::PriorityMemQueue* queue;
-    bool messageSent;
+    std::atomic<bool> messageSent;
     Os::QueueInterface::Status status;
     Os::Mutex mutex;
-    bool started;
+    std::atomic<bool> started;
 
     BlockingSendContext()
         : queue(nullptr), messageSent(false), status(Os::QueueInterface::Status::OP_OK), started(false) {}
@@ -2023,7 +2023,7 @@ TEST_F(PriorityMemQueueTestFixture, DisableDuringBlockingReceive) {
     // Disable priority 2 while receiver is blocked
     queue.m_handle.disablePriority(2);
 
-    // Send to disabled priority 2 - should be rejected or fall back to priority 0
+    // Send to disabled priority 2 - succeeds (disable affects receive only); message stays queued
     U8 sendBuf2[MESSAGE_SIZE];
     sendBuf2[0] = 0xBB;
     (void)queue.send(sendBuf2, 1, 2, Os::QueueInterface::BlockingType::NONBLOCKING);

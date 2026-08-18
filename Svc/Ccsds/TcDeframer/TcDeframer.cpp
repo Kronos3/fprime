@@ -97,7 +97,8 @@ void TcDeframer ::dataIn_handler(FwIndexType portNum, Fw::Buffer& data, const Co
     U16 computed_crc = Ccsds::Utils::CRC16::compute(data.getData(), total_frame_length - TCTrailer::SERIALIZED_SIZE);
     TCTrailer trailer;
     auto deserializer = data.getDeserializer();
-    deserializer.moveDeserToOffset(total_frame_length - TCTrailer::SERIALIZED_SIZE);
+    status = deserializer.moveDeserToOffset(total_frame_length - TCTrailer::SERIALIZED_SIZE);
+    FW_ASSERT(status == Fw::FW_SERIALIZE_OK, status);
     status = deserializer.deserializeTo(trailer);
     FW_ASSERT(status == Fw::FW_SERIALIZE_OK, status);
 
@@ -110,7 +111,7 @@ void TcDeframer ::dataIn_handler(FwIndexType portNum, Fw::Buffer& data, const Co
     }
 
     // Point to the start of the data field and set appropriate size
-    data.setData(data.getData() + TCHeader::SERIALIZED_SIZE);
+    data.advance(TCHeader::SERIALIZED_SIZE);
     // Shrink size to that of the encapsulated data field ( header | data | trailer )
     data.setSize(total_frame_length - TCHeader::SERIALIZED_SIZE - TCTrailer::SERIALIZED_SIZE);
 

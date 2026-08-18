@@ -13,7 +13,10 @@ namespace Svc {
 // ----------------------------------------------------------------------
 
 FileWorker ::FileWorker(const char* const compName)
-    : FileWorkerComponentBase(compName), m_state(FileWorkerState::FW_STATE_IDLE), m_abort(false), m_chunkSize(0) {}
+    : FileWorkerComponentBase(compName),
+      m_state(FileWorkerState::FW_STATE_IDLE),
+      m_abort(false),
+      m_chunkSize(BLOCK_SIZE_BYTES) {}
 
 void FileWorker ::configure(U64 chunkSize) {
     FW_ASSERT(chunkSize > 0);
@@ -81,8 +84,8 @@ void FileWorker ::readIn_handler(FwIndexType portNum, const Fw::StringBase& path
     // Start reading
     FileWorkerStatus workerStat = this->readBufferFromFile(buffer, fileName);
 
-    // Signal done and pass U8* buffer with data
-    this->readDoneOut_out(0, workerStat, fileSize);
+    // Report 0 bytes on a failed or aborted read so readDoneOut does not imply success.
+    this->readDoneOut_out(0, workerStat, (workerStat == FW_STATUS_DONE_READ) ? buffer.getSize() : 0);
     this->m_state = FW_STATE_IDLE;
 }
 
@@ -107,7 +110,7 @@ void FileWorker ::verifyIn_handler(FwIndexType portNum, const Fw::StringBase& pa
         workerStat = FW_STATUS_FAILED_CRC;
     }
 
-    if (crc != crcFromFile) {
+    if (crc != crcCalculated) {
         workerStat = FW_STATUS_FAILED_CRC;
         this->log_WARNING_LO_CrcVerificationError(crc, crcCalculated);
     }
@@ -174,12 +177,20 @@ void FileWorker ::writeIn_handler(FwIndexType portNum,
     fileName[sizeof(fileName) - 1] = 0;  // guarantee termination
 
     // Write
-    bool isWrite = this->writeBufferToFile(buffer, fileName, offsetBytes, append);
+    const bool isWrite = this->writeBufferToFile(buffer, fileName, offsetBytes, append);
     if (isWrite) {
         this->writeBufferHashToFile(buffer, fileName, offsetBytes, append);
     }
 
-    this->writeDoneOut_out(0, FW_STATUS_DONE_WRITE, buffer.getSize());
+    // Report the actual outcome of the write. A failed writeBufferToFile (open
+    // failure, permission denied, disk full, partial write) must not be reported
+    // to ground as a successful FW_STATUS_DONE_WRITE.
+    const FileWorkerStatus writeStatus = isWrite ? FW_STATUS_DONE_WRITE : FW_STATUS_FAILED_TO_WRITE;
+    // Report bytes actually written, which excludes the skipped offset. Reporting the full
+    // buffer size over-reports by offsetBytes, and reports a whole buffer for a zero-length
+    // write. offsetBytes <= buffer.getSize() is checked above, so this cannot underflow.
+    const FwSizeType writtenBytes = buffer.getSize() - offsetBytes;
+    this->writeDoneOut_out(0, writeStatus, isWrite ? writtenBytes : 0);
     this->m_state = FW_STATE_IDLE;
     return;
 }
@@ -207,15 +218,20 @@ Svc ::FileWorkerStatus FileWorker ::readBufferFromFile(Fw::Buffer& buffer, const
 
     // Read file
     this->log_ACTIVITY_LO_ReadBegin(readSize, fileNameStr);
-    this->readFile(buffer, readSize, file, fileNameStr);
+    const FileWorkerReadStatus readStat = this->readFile(buffer, readSize, file, fileNameStr);
 
     this->log_ACTIVITY_LO_ReadCompleted(readSize, fileNameStr);
     file.close();
 
-    return FileWorkerStatus::FW_STATUS_DONE_READ;
+    // Only a completed read is DONE_READ; error, abort, or timeout reports FAILED_TO_READ.
+    return (readStat == FileWorkerReadStatus::FW_READ_DONE) ? FileWorkerStatus::FW_STATUS_DONE_READ
+                                                            : FileWorkerStatus::FW_STATUS_FAILED_TO_READ;
 }
 
-void FileWorker ::readFile(Fw::Buffer& buffer, FwSizeType size, Os::File& file, const Fw::LogStringArg& fileNameStr) {
+Svc ::FileWorkerReadStatus FileWorker ::readFile(Fw::Buffer& buffer,
+                                                 FwSizeType size,
+                                                 Os::File& file,
+                                                 const Fw::LogStringArg& fileNameStr) {
     FW_ASSERT(buffer.getData() != nullptr);
     FW_ASSERT(size > 0);
     FW_ASSERT(fileNameStr != nullptr);
@@ -225,7 +241,7 @@ void FileWorker ::readFile(Fw::Buffer& buffer, FwSizeType size, Os::File& file, 
     U64 timeout = 0;
 
     if (!file.isOpen()) {
-        return;
+        return FileWorkerReadStatus::FW_READ_ERROR;
     }
 
     FileWorkerReadStatus readStat = this->readFileBytes(buffer, size, file, bytesRead);
@@ -246,21 +262,27 @@ void FileWorker ::readFile(Fw::Buffer& buffer, FwSizeType size, Os::File& file, 
 
         case FW_READ_TIMEOUT:
             // Determine true timeout
-            static_assert(BLOCK_SIZE_BYTES > 0, "Divide by 0 error");
-            numChunks = (size / BLOCK_SIZE_BYTES);
-            if (size % BLOCK_SIZE_BYTES > 0) {
+            FW_ASSERT(this->m_chunkSize > 0);
+            numChunks = (size / this->m_chunkSize);
+            if (size % this->m_chunkSize > 0) {
                 numChunks += 1;
             }
             timeout = numChunks * TIMEOUT_MS;
             this->log_WARNING_HI_ReadTimeout(bytesRead, size, fileNameStr, timeout);
             break;
 
+        case FW_READ_UNKNOWN:
+            // The read loop ran out of iterations: a read larger than
+            // MAX_LOOP_ITERATIONS * BLOCK_SIZE_BYTES cannot complete
+            this->log_WARNING_HI_ReadError(bytesRead, size, fileNameStr);
+            break;
+
         default:
-            FW_ASSERT(0);  // Should not get here
+            FW_ASSERT(false, static_cast<FwAssertArgType>(readStat));
             break;
     }
 
-    return;
+    return readStat;
 }
 
 Svc ::FileWorkerReadStatus FileWorker ::readFileBytes(Fw::Buffer& buffer,
@@ -271,9 +293,9 @@ Svc ::FileWorkerReadStatus FileWorker ::readFileBytes(Fw::Buffer& buffer,
     FW_ASSERT(size > 0);
 
     // Determine true timeout
-    static_assert(BLOCK_SIZE_BYTES > 0, "Divide by 0 error");
-    FwSizeType numChunks = (size / BLOCK_SIZE_BYTES);
-    if (size % BLOCK_SIZE_BYTES > 0) {
+    FW_ASSERT(this->m_chunkSize > 0);
+    FwSizeType numChunks = (size / this->m_chunkSize);
+    if (size % this->m_chunkSize > 0) {
         numChunks += 1;
     }
     U64 timeout = numChunks * TIMEOUT_MS;
@@ -282,12 +304,17 @@ Svc ::FileWorkerReadStatus FileWorker ::readFileBytes(Fw::Buffer& buffer,
     bytesRead = 0;
     Fw::Time start = this->getTime();
 
-    for (U32 i = 0; i < MAX_LOOP_ITERATIONS; i++) {
-        FwSizeType readAmt = FW_MIN(size - bytesRead, BLOCK_SIZE_BYTES);
+    for (FwSizeType i = 0; i < numChunks; i++) {
+        FwSizeType readAmt = FW_MIN(size - bytesRead, this->m_chunkSize);
         FwSizeType readAmtActual = readAmt;
         Os::File::Status ret = file.read(buffer.getData() + bytesRead, readAmtActual);
 
         if (Os::File::OP_OK != ret || readAmt != readAmtActual) {
+            // Count the bytes actually transferred so ReadError telemetry reports
+            // the true amount. A short read stays an error on purpose: FileWorker
+            // reads a fixed, caller-specified size and must not silently accept a
+            // file shorter than expected (e.g. truncated mid-read).
+            bytesRead += readAmtActual;
             return FileWorkerReadStatus::FW_READ_ERROR;
         }
 
@@ -365,6 +392,28 @@ bool FileWorker ::writeBufferToFile(Fw::Buffer& buffer, const char* fileName, Fw
     FW_ASSERT(fileName != nullptr);
 
     Fw::LogStringArg logStringArg(fileName);
+
+    // Get buffer data and size, then apply offset
+    FwSizeType size = buffer.getSize();
+    U8* const data = reinterpret_cast<U8*>(buffer.getData());
+    FW_ASSERT(data != nullptr);
+    FW_ASSERT(offset <= size);
+    size -= offset;
+
+    // A zero-length write (offset == buffer size, a valid "nothing left to write" boundary
+    // permitted by writeIn_handler's offset check) is a successful no-op. Return before
+    // opening the file: this avoids reaching FW_ASSERT(size > 0) in writeToFile(), and avoids
+    // creating an empty file for a request that writes nothing, since both OPEN_WRITE and
+    // OPEN_APPEND pass O_CREAT. An existing file's contents are not at risk either way here:
+    // OPEN_WRITE overwrites in place and does not truncate; only OPEN_CREATE sets O_TRUNC.
+    if (size == 0) {
+        this->log_ACTIVITY_LO_WriteCompleted(size, logStringArg);
+        return true;
+    }
+
+    U8* const dataFromOffset = reinterpret_cast<U8*>(data + offset);
+    FW_ASSERT(dataFromOffset != nullptr);
+
     Os::File file;
     Os::File::Status stat = Os::File::OP_OK;
 
@@ -379,17 +428,6 @@ bool FileWorker ::writeBufferToFile(Fw::Buffer& buffer, const char* fileName, Fw
         this->log_WARNING_HI_OpenFileError(logStringArg, stat);
         return false;
     }
-
-    // Get buffer data and size
-    FwSizeType size = buffer.getSize();
-    U8* const data = reinterpret_cast<U8*>(buffer.getData());
-    FW_ASSERT(data != nullptr);
-
-    // Apply offset
-    FW_ASSERT(offset <= size);
-    size -= offset;
-    U8* const dataFromOffset = reinterpret_cast<U8*>(data + offset);
-    FW_ASSERT(dataFromOffset != nullptr);
 
     // Write file
     this->log_ACTIVITY_LO_WriteBegin(size, logStringArg);
@@ -424,6 +462,15 @@ void FileWorker ::writeBufferHashToFile(Fw::Buffer& buffer, const char* fileName
     // Apply offset
     FW_ASSERT(offset <= size);
     size -= offset;  // checked by assert
+
+    // A zero-length write changed no file contents, so the hash must not change either. Skip
+    // generation entirely: on the append path this would otherwise trip FW_ASSERT(size > 0) in
+    // getHash(), and on the non-append path it would silently overwrite a valid hash file with
+    // the hash of zero bytes.
+    if (size == 0) {
+        return;
+    }
+
     U8* const dataFromOffset = reinterpret_cast<U8*>(data + offset);
     FW_ASSERT(dataFromOffset != nullptr);
 
@@ -468,18 +515,20 @@ FwSizeType FileWorker ::writeToFile(const U8* data, FwSizeType size, Os::File& f
     FW_ASSERT(fileName != nullptr);
 
     // Determine true timeout
-    static_assert(BLOCK_SIZE_BYTES > 0, "Divide by 0 error");
-    FwSizeType numChunks = (size / BLOCK_SIZE_BYTES);
-    if (size % BLOCK_SIZE_BYTES > 0) {
+    FW_ASSERT(this->m_chunkSize > 0);
+    FwSizeType numChunks = (size / this->m_chunkSize);
+    if (size % this->m_chunkSize > 0) {
         numChunks += 1;
     }
     U64 timeout = numChunks * TIMEOUT_MS;
 
-    // Write loop
+    // Write loop: legal short writes make progress but consume an iteration, so
+    // allow extra iterations beyond the chunk count before giving up
+    const FwSizeType maxIterations = numChunks + MAX_LOOP_ITERATIONS;
     FwSizeType bytesWritten = 0;
     Fw::Time start = this->getTime();
-    for (U32 i = 0; i < MAX_LOOP_ITERATIONS; i++) {
-        FwSizeType writeAmt = FW_MIN(size - bytesWritten, BLOCK_SIZE_BYTES);
+    for (FwSizeType i = 0; (i < maxIterations) && (bytesWritten < size); i++) {
+        FwSizeType writeAmt = FW_MIN(size - bytesWritten, this->m_chunkSize);
         Os::File::Status ret = file.write(data + bytesWritten, writeAmt);
 
         if (Os::File::OP_OK != ret || writeAmt == 0) {
@@ -510,10 +559,6 @@ FwSizeType FileWorker ::writeToFile(const U8* data, FwSizeType size, Os::File& f
         }
 
         bytesWritten += writeAmt;
-        if (bytesWritten >= size) {
-            // Finished, break out
-            break;
-        }
     }
 
     return bytesWritten;
