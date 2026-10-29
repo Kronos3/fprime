@@ -13,6 +13,7 @@
 
 #include <Utils/Hash/Hash.hpp>
 #include "Fw/Com/ComBuffer.hpp"
+#include "Fw/Types/FileNameString.hpp"
 #include "Fw/Types/MemAllocator.hpp"
 #include "Os/File.hpp"
 #include "Os/ValidateFile.hpp"
@@ -216,7 +217,7 @@ class CmdSequencerComponentImpl final : public CmdSequencerComponentBase {
 
         //! Get the file name
         //! \return The file name
-        Fw::CmdStringArg& getFileName();
+        Fw::FileNameString& getFileName();
 
         //! Get the log file name
         //! \return The log file name
@@ -260,7 +261,7 @@ class CmdSequencerComponentImpl final : public CmdSequencerComponentBase {
         Events m_events;
 
         //! The sequence file name
-        Fw::CmdStringArg m_fileName;
+        Fw::FileNameString m_fileName;
 
         //! Copy of file name for events
         Fw::LogStringArg m_logFileName;
@@ -440,6 +441,14 @@ class CmdSequencerComponentImpl final : public CmdSequencerComponentBase {
 
         //! Clear the timer
         void clear() { this->m_state = CLEAR; }
+
+        //! Determine whether the timer is set
+        //! \return Yes or no
+        bool isSet() const { return this->m_state == SET; }
+
+        //! Get the expiration time
+        //! \return The time at which a set timer expires
+        Fw::Time getExpirationTime() const { return this->expirationTime; }
 
         //! Determine whether the timer is expired at a given time
         //! \return Yes or no
@@ -650,8 +659,12 @@ class CmdSequencerComponentImpl final : public CmdSequencerComponentBase {
     void setCmdTimeout(const Fw::Time& currentTime  //!< The current time
     );
 
-    //! Sequence run helper
+    //! Shared body of the seqRunIn and seqDispatchIn handlers
     void doSequenceRun(const Fw::StringBase& fileName);
+
+    //! Answer a rejected seqRunIn / seqDispatchIn request with EXECUTION_ERROR on seqDone,
+    //! if that port is connected
+    void rejectSequenceRun();
 
   private:
     // ----------------------------------------------------------------------
